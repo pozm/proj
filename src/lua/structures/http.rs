@@ -55,7 +55,7 @@ impl UserData for LuaHttp {
 
             .send().await.or_else(|e| Err(Error::RuntimeError(e.to_string())))?;
 
-            println!("made req");
+            // println!("made req");
 
             let status = result.status().as_u16();
             let headers = result.headers().iter().map(|(k,v)| (k.to_string(),v.to_str().unwrap().to_string())).collect::<Vec<_>>();

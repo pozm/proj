@@ -1,4 +1,5 @@
 mod lua;
+mod utils;
 use std::{fs::{create_dir_all, read_dir, File}, io::Read, path::PathBuf, sync::{Arc, Mutex}};
 
 use clap::Parser;

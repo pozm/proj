@@ -1,4 +1,4 @@
-use std::{path::{PathBuf, Path}, fs::{File, OpenOptions, create_dir, read_dir}, io::{Write, Read, Seek}};
+use std::{path::{PathBuf, Path}, fs::{File, OpenOptions, create_dir, read_dir, self}, io::{Write, Read, Seek}};
 use path_absolutize::*;
 use mlua::{UserData, Error};
 
@@ -116,6 +116,28 @@ fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
             }
 
             Ok(path.exists())
+        });
+        methods.add_method("copy", |_l,t,(fp,tp):(String,String)| {
+            let path = Path::new(&tp).absolutize()?;
+            if !t.is_path_allowed(path.as_ref()) {
+                return Err(Error::RuntimeError("Path not allowed".to_string()))
+            }
+
+            crate::utils::copy(fp, path)?;
+            Ok(())
+        });
+        methods.add_method("move", |_l,t,(fp,tp):(String,String)| {
+            let path = Path::new(&tp).absolutize()?;
+            if !t.is_path_allowed(path.as_ref()) {
+                return Err(Error::RuntimeError("Path not allowed".to_string()))
+            }
+            let pathf = Path::new(&fp).absolutize()?;
+            if !t.is_path_allowed(pathf.as_ref()) {
+                return Err(Error::RuntimeError("Path not allowed".to_string()))
+            }
+
+            fs::rename(pathf, path)?;
+            Ok(())
         })
     }
 }
