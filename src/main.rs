@@ -4,7 +4,7 @@ use std::{fs::{create_dir_all, read_dir, File}, io::Read, path::PathBuf, sync::{
 use clap::Parser;
 use directories::ProjectDirs;
 use lua::structures::{scripts::SCRIPTS_MANAGER, fs::LuaFs, http::LuaHttp};
-use mlua::{Lua, Function};
+use mlua::{Lua, Function, StdLib, LuaOptions};
 
 #[derive(Parser)]
 #[clap(author,version,about)]
@@ -32,7 +32,7 @@ async fn main() {
     let scripts_conf_path = scripts_path.join("config");
     create_dir_all(&proj).unwrap();
     create_dir_all(&scripts_path).unwrap();
-    let lua = Lua::new();
+    let lua = Lua::new_with(StdLib::BIT | StdLib::MATH | StdLib::STRING | StdLib::TABLE, LuaOptions::default()).expect("unable to make lua");
 
     lua::methods::setup_lua(&lua);
 
