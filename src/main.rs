@@ -1,39 +1,48 @@
 mod lua;
 mod utils;
-use std::{fs::{create_dir_all, read_dir, File}, io::Read, path::PathBuf, sync::{Arc, Mutex}};
+use std::{
+    fs::{create_dir_all, read_dir, File},
+    io::Read,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 use clap::Parser;
 use directories::ProjectDirs;
-use lua::structures::{scripts::SCRIPTS_MANAGER, fs::LuaFs, http::LuaHttp};
-use mlua::{Lua, Function, StdLib, LuaOptions};
+use lua::structures::{fs::LuaFs, http::LuaHttp, scripts::SCRIPTS_MANAGER};
+use mlua::{Function, Lua, LuaOptions, StdLib};
 
 #[derive(Parser)]
-#[clap(author,version,about)]
+#[clap(author, version, about)]
 struct ProgramArgs {
-    #[clap(short, long, parse(from_os_str),value_name = "PROJECT")]
-    pub project_path : Option<PathBuf>,
+    #[clap(short, long, parse(from_os_str), value_name = "PROJECT")]
+    pub project_path: Option<PathBuf>,
     #[clap(short, long)]
-    pub script : Option<String>,
+    pub script: Option<String>,
     #[clap(short, long)]
-    pub list_scripts : bool,
+    pub list_scripts: bool,
 }
 #[tokio::main]
 async fn main() {
-
-    let cli : ProgramArgs = ProgramArgs::parse();
+    let cli: ProgramArgs = ProgramArgs::parse();
 
     if !cli.list_scripts && cli.script.is_none() {
         println!("No script specified");
         return;
     }
 
-    let proj_dirs = ProjectDirs::from("com", "Pozm",  "Proj").expect("Failed to get project directories");
+    let proj_dirs =
+        ProjectDirs::from("com", "Pozm", "Proj").expect("Failed to get project directories");
     let proj = proj_dirs.config_dir();
     let scripts_path = proj.join("scripts");
     let scripts_conf_path = scripts_path.join("config");
     create_dir_all(&proj).unwrap();
     create_dir_all(&scripts_path).unwrap();
-    let lua = Lua::new_with(StdLib::BIT | StdLib::MATH | StdLib::STRING | StdLib::TABLE, LuaOptions::default()).expect("unable to make lua");
+    let lua = Lua::new_with(
+        StdLib::BIT | StdLib::MATH | StdLib::STRING | StdLib::TABLE,
+        LuaOptions::default(),
+    )
+    .expect("unable to make lua");
 
     lua::methods::setup_lua(&lua);
 
@@ -42,7 +51,6 @@ async fn main() {
     for entry in read {
         let entry = entry.unwrap();
         if entry.file_type().unwrap().is_file() {
-            
             println!("loading from {}", entry.path().display());
             let mut file = File::open(entry.path()).expect("unable to open file");
             let mut lua_code = String::new();
@@ -51,9 +59,16 @@ async fn main() {
         }
     }
 
-    let script_names = SCRIPTS_MANAGER.lock().unwrap().scripts.iter().map(|x|&x.name).cloned().collect::<Vec<_>>();
+    let script_names = SCRIPTS_MANAGER
+        .lock()
+        .unwrap()
+        .scripts
+        .iter()
+        .map(|x| &x.name)
+        .cloned()
+        .collect::<Vec<_>>();
     if cli.list_scripts {
-        println!("loaded scripts : {}",script_names.join(", "));
+        println!("loaded scripts : {}", script_names.join(", "));
         return;
     }
     if cli.project_path.is_none() {
@@ -64,26 +79,30 @@ async fn main() {
         if !script_names.contains(&script) {
             println!("unable to find that script, try using listing scripts")
         } else {
-
             if let Some(lua_fn) = SCRIPTS_MANAGER.lock().unwrap().fns.get(&script).unwrap() {
                 let lua_fn = lua.registry_value::<Function>(lua_fn).unwrap();
                 let proj_dir = cli.project_path.unwrap().clone().display().to_string();
 
-                lua.globals().set("DIR_PROJECT", format!("{}/",proj_dir.clone())).unwrap();
-                lua.globals().set("fs", LuaFs(vec![proj_dir.clone()])).unwrap();
-                lua.globals().set("http", LuaHttp(Arc::new(Mutex::new(reqwest::Client::new())))).unwrap();
+                lua.globals()
+                    .set("DIR_PROJECT", format!("{}/", proj_dir.clone()))
+                    .unwrap();
+                lua.globals()
+                    .set("fs", LuaFs(vec![proj_dir.clone()]))
+                    .unwrap();
+                lua.globals()
+                    .set(
+                        "http",
+                        LuaHttp(Arc::new(Mutex::new(reqwest::Client::new()))),
+                    )
+                    .unwrap();
 
-
-                match lua_fn.call_async::<_,()>(()).await  {
+                match lua_fn.call_async::<_, ()>(()).await {
                     Ok(_) => println!("done!"),
-                    Err(e) => eprintln!("error when calling script : {}",e),
+                    Err(e) => eprintln!("error when calling script : {}", e),
                 }
-
             } else {
                 println!("the script you provided is broken.")
             }
-
         }
     }
-
 }

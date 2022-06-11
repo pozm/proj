@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use mlua::{MultiValue, Lua};
+use mlua::{Lua, MultiValue};
 
 use crate::lua::utils::pretty_print_lvalue;
 
@@ -14,31 +14,39 @@ pub fn setup_lua(lua: &Lua) {
     //     Ok(())
     // }).expect("reg hook failed");
 
-    let new_print = lua.create_function(|_,items:MultiValue| {
-        println!("LUA DEBUG : {}", items.iter()
-            .map(|value| format!("{:^6}",pretty_print_lvalue(value,None)))
-            .collect::<Vec<_>>()
-            .join("|")
-        );
-        Ok(())
-    }).unwrap();
+    let new_print = lua
+        .create_function(|_, items: MultiValue| {
+            println!(
+                "LUA DEBUG : {}",
+                items
+                    .iter()
+                    .map(|value| format!("{:^6}", pretty_print_lvalue(value, None)))
+                    .collect::<Vec<_>>()
+                    .join("|")
+            );
+            Ok(())
+        })
+        .unwrap();
     globals.set("print", new_print).unwrap();
-    globals.set("luaScript",lua.create_function(|_,s:String| {
-        let p = LuaScript {
-            name:s
-        };
-        Ok( p )
-    }).unwrap()).expect("unable to register proj");
-    globals.set("scriptManager", SCRIPTS_MANAGER.clone()).unwrap();
-
+    globals
+        .set(
+            "luaScript",
+            lua.create_function(|_, s: String| {
+                let p = LuaScript { name: s };
+                Ok(p)
+            })
+            .unwrap(),
+        )
+        .expect("unable to register proj");
+    globals
+        .set("scriptManager", SCRIPTS_MANAGER.clone())
+        .unwrap();
 }
 
 pub fn load_script(lua: &Lua, code: String) {
     let cnk = lua.load(&code);
     match cnk.exec() {
-        Ok(_) => {},
-        Err(e) => println!("{}",e),
+        Ok(_) => {}
+        Err(e) => println!("{}", e),
     }
-
 }
-
