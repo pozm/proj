@@ -1,9 +1,9 @@
 mod lua;
-use std::{fs::{create_dir_all, read_dir, File}, io::Read, path::PathBuf};
+use std::{fs::{create_dir_all, read_dir, File}, io::Read, path::PathBuf, sync::{Arc, Mutex}};
 
 use clap::Parser;
 use directories::ProjectDirs;
-use lua::structures::{scripts::SCRIPTS_MANAGER, fs::LuaFs};
+use lua::structures::{scripts::SCRIPTS_MANAGER, fs::LuaFs, http::LuaHttp};
 use mlua::{Lua, Function};
 
 #[derive(Parser)]
@@ -16,8 +16,8 @@ struct ProgramArgs {
     #[clap(short, long)]
     pub list_scripts : bool,
 }
-
-fn main() {
+#[tokio::main]
+async fn main() {
 
     let cli : ProgramArgs = ProgramArgs::parse();
 
@@ -70,9 +70,10 @@ fn main() {
 
                 lua.globals().set("DIR_PROJECT", format!("{}/",proj_dir.clone())).unwrap();
                 lua.globals().set("fs", LuaFs(vec![proj_dir.clone()])).unwrap();
+                lua.globals().set("http", LuaHttp(Arc::new(Mutex::new(reqwest::Client::new())))).unwrap();
 
 
-                match lua_fn.call::<_,()>(())  {
+                match lua_fn.call_async::<_,()>(()).await  {
                     Ok(_) => println!("done!"),
                     Err(e) => eprintln!("error when calling script : {}",e),
                 }
