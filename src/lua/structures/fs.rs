@@ -20,7 +20,16 @@ impl LuaFs {
             .iter()
             .any(|allowed_path| path.starts_with(allowed_path))
     }
+    #[inline]
+    fn is_path_allowed_result<T: Into<PathBuf> + Clone>(&self,path:T) -> Result<(),mlua::Error> {
+        if self.is_path_allowed(path.clone()) {
+            Ok(())
+        } else {
+            Err(Error::RuntimeError(format!("the path provided ({}) is not allowed", path.into().display())))
+        }
+    }
 }
+
 impl UserData for LuaFile {
     fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
         fields.add_field_method_get("name", |l, t| Ok(t.0.clone()));
@@ -73,9 +82,7 @@ impl UserData for LuaFs {
     fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method("createFile", |l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
-            if !t.is_path_allowed(path.as_ref()) {
-                return Err(Error::RuntimeError("Path not allowed".to_string()));
-            }
+            t.is_path_allowed_result(path.as_ref())?;
 
             let file = OpenOptions::new()
                 .create(true)
@@ -86,20 +93,16 @@ impl UserData for LuaFs {
             Ok(file)
         });
         methods.add_method("createDir", |l, t, p: String| {
-            let path = Path::new(&p);
-            if !t.is_path_allowed(path) {
-                return Err(Error::RuntimeError("Path not allowed".to_string()));
-            }
-            create_dir(path)?;
+            let path = Path::new(&p).absolutize()?;
+            t.is_path_allowed_result(path.as_ref())?;
+            create_dir(&path)?;
             // let file = LuaFile(path.display().to_string(), file);
 
-            Ok(path.display().to_string())
+            Ok(path.as_ref().display().to_string())
         });
         methods.add_method("openDir", |l, t, p: String| {
-            let path = Path::new(&p);
-            if !t.is_path_allowed(path) {
-                return Err(Error::RuntimeError("Path not allowed".to_string()));
-            }
+            let path = Path::new(&p).absolutize()?;
+            t.is_path_allowed_result(path.as_ref())?;
 
             let dir = read_dir(path)?;
             // let file = LuaFile(path.display().to_string(), file);
@@ -110,9 +113,7 @@ impl UserData for LuaFs {
         });
         methods.add_method("openFile", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
-            if !t.is_path_allowed(path.as_ref()) {
-                return Err(Error::RuntimeError("Path not allowed".to_string()));
-            }
+            t.is_path_allowed_result(path.as_ref())?;
 
             let file = OpenOptions::new()
                 .create(false)
@@ -124,30 +125,22 @@ impl UserData for LuaFs {
         });
         methods.add_method("exists", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
-            if !t.is_path_allowed(path.as_ref()) {
-                return Err(Error::RuntimeError("Path not allowed".to_string()));
-            }
+            t.is_path_allowed_result(path.as_ref())?;
 
             Ok(path.exists())
         });
         methods.add_method("copy", |_l, t, (fp, tp): (String, String)| {
             let path = Path::new(&tp).absolutize()?;
-            if !t.is_path_allowed(path.as_ref()) {
-                return Err(Error::RuntimeError("Path not allowed".to_string()));
-            }
+            t.is_path_allowed_result(path.as_ref())?;
 
             crate::utils::copy(fp, path)?;
             Ok(())
         });
         methods.add_method("move", |_l, t, (fp, tp): (String, String)| {
             let path = Path::new(&tp).absolutize()?;
-            if !t.is_path_allowed(path.as_ref()) {
-                return Err(Error::RuntimeError("Path not allowed".to_string()));
-            }
+            t.is_path_allowed_result(path.as_ref())?;
             let pathf = Path::new(&fp).absolutize()?;
-            if !t.is_path_allowed(pathf.as_ref()) {
-                return Err(Error::RuntimeError("Path not allowed".to_string()));
-            }
+            t.is_path_allowed_result(path.as_ref())?;
 
             fs::rename(pathf, path)?;
             Ok(())
