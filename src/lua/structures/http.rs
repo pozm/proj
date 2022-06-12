@@ -11,6 +11,8 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 
+use super::permissions::{PERMISSIONS_MANAGER, Permission};
+
 #[derive(Clone)]
 pub struct LuaHttp(pub Arc<Mutex<reqwest::Client>>);
 
@@ -37,6 +39,15 @@ impl UserData for LuaHttp {
     fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_async_method("request", |l, t, options: Value| async move {
             let options = l.from_value::<LuaHttpRequest>(options)?;
+
+            if let Ok(u) = url::Url::parse(&options.url) {
+                let domain = u.host_str().ok_or(Error::RuntimeError("invalid url".to_string()))?;
+                let p = Permission::Http(domain.to_string());
+                PERMISSIONS_MANAGER.lock().unwrap().ask_for_access(&p)?;
+            } else {
+                return Err(Error::RuntimeError("Invalid URL".to_string()));
+            }
+
 
             let client = t.0.lock().unwrap();
 

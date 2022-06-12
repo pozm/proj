@@ -1,3 +1,4 @@
+#![feature(let_chains)]
 mod lua;
 mod utils;
 use std::{

@@ -24,9 +24,10 @@ s.invoke_fn = function()
     print(files)
 
     print(file)
-
-    print(fs:exists(DIR_PROJECT.. "pogger.lua"))
-    print(fs:exists(DIR_PROJECT.. "pogger1.lua"))
+    print(pcall(function() 
+        return fs:exists(DIR_PROJECT.. "../pogger.lua")
+    end))
+    print(fs:exists(DIR_PROJECT.. "../pogger1.lua"))
 
     local remote_content = http:request({
         url="https://httpbin.org/anything",

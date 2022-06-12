@@ -15,8 +15,10 @@ path-absolutize = "3"
 tokio = {version = "1.19.2",features=["full"]}
 reqwest = "0.11.10"
 serde = {version = "1.0",features=["derive"]}
-
+native-dialog = {version = "0.6.3",features=["windows_dpi_awareness"]}
+url = {version = "2.2.2"}
 [feature]
-default=["lua52"]
+default=["lua52","native-dialog"]
+native-dialogs = ["dep:native-dialog"]
 lua52 = ["mlua/lua52"]
 luau=["mlua/luau"]
