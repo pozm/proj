@@ -14,6 +14,8 @@ impl LuaFs {
     fn is_path_allowed<T: Into<PathBuf>>(&self, path: T) -> bool {
         let path: &PathBuf = &path.into();
 
+        println!("check if path is allowed: {:?}", path);
+
         self.0
             .iter()
             .any(|allowed_path| path.starts_with(allowed_path))

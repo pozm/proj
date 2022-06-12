@@ -11,6 +11,7 @@ use clap::Parser;
 use directories::ProjectDirs;
 use lua::structures::{fs::LuaFs, http::LuaHttp, scripts::SCRIPTS_MANAGER};
 use mlua::{Function, Lua, LuaOptions, StdLib};
+use path_absolutize::Absolutize;
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -21,12 +22,14 @@ struct ProgramArgs {
     pub script: Option<String>,
     #[clap(short, long)]
     pub list_scripts: bool,
+    #[clap(short='c',long)]
+    pub show_config: bool,
 }
 #[tokio::main]
 async fn main() {
     let cli: ProgramArgs = ProgramArgs::parse();
 
-    if !cli.list_scripts && cli.script.is_none() {
+    if !cli.list_scripts && cli.script.is_none() && !cli.show_config {
         println!("No script specified");
         return;
     }
@@ -34,10 +37,16 @@ async fn main() {
     let proj_dirs =
         ProjectDirs::from("com", "Pozm", "Proj").expect("Failed to get project directories");
     let proj = proj_dirs.config_dir();
+
+    
     let scripts_path = proj.join("scripts");
     let scripts_conf_path = scripts_path.join("config");
     create_dir_all(&proj).unwrap();
     create_dir_all(&scripts_path).unwrap();
+    if cli.show_config {
+        println!("config can be found at {:?}", proj.absolutize().unwrap());
+        return
+    }
     let lua = Lua::new_with(
         StdLib::BIT | StdLib::MATH | StdLib::STRING | StdLib::TABLE,
         LuaOptions::default(),
@@ -59,6 +68,12 @@ async fn main() {
         }
     }
 
+    // testing
+
+    lua::methods::load_script(&lua, include_str!("../example.proj.lua").to_string());
+
+    // end
+
     let script_names = SCRIPTS_MANAGER
         .lock()
         .unwrap()
@@ -75,21 +90,24 @@ async fn main() {
         println!("No project path specified");
         return;
     }
+
+    create_dir_all(cli.project_path.as_ref().unwrap());
+
     if let Some(script) = cli.script {
         if !script_names.contains(&script) {
             println!("unable to find that script, try using listing scripts")
         } else {
             if let Some(lua_fn) = SCRIPTS_MANAGER.lock().unwrap().fns.get(&script).unwrap() {
                 let lua_fn = lua.registry_value::<Function>(lua_fn).unwrap();
-                let proj_dir = cli.project_path.unwrap().clone().display().to_string();
-
-                lua.globals()
+                let proj_dir = cli.project_path.unwrap().absolutize().unwrap().clone().display().to_string();
+                let globs = lua.globals();
+                globs
                     .set("DIR_PROJECT", format!("{}/", proj_dir.clone()))
                     .unwrap();
-                lua.globals()
+                globs
                     .set("fs", LuaFs(vec![proj_dir.clone()]))
                     .unwrap();
-                lua.globals()
+                globs
                     .set(
                         "http",
                         LuaHttp(Arc::new(Mutex::new(reqwest::Client::new()))),

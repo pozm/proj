@@ -88,6 +88,7 @@ pub fn pretty_print_lvalue(val: &Value, depth: Option<i32>) -> String {
                 }
             )
         }
+        Value::Vector(x, y, z) => output = format!("vector<{}, {}, {}>", x, y, z),
         Value::Error(e) => output = format!("Error<{}>", e),
     }
     output
