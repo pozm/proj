@@ -21,27 +21,30 @@ impl LuaFs {
             .any(|allowed_path| path.starts_with(allowed_path))
     }
     #[inline]
-    fn is_path_allowed_result<T: Into<PathBuf> + Clone>(&self,path:T) -> Result<(),mlua::Error> {
+    fn is_path_allowed_result<T: Into<PathBuf> + Clone>(&self, path: T) -> Result<(), mlua::Error> {
         if self.is_path_allowed(path.clone()) {
             Ok(())
         } else {
-            Err(Error::RuntimeError(format!("the path provided ({}) is not allowed", path.into().display())))
+            Err(Error::RuntimeError(format!(
+                "the path provided ({}) is not allowed",
+                path.into().display()
+            )))
         }
     }
 }
 
 impl UserData for LuaFile {
     fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
-        fields.add_field_method_get("name", |l, t| Ok(t.0.clone()));
+        fields.add_field_method_get("name", |_l, t| Ok(t.0.clone()));
         // fields.add_field_method_get("size", |l,t|Ok(t.1.stream_len()?.clone()))
-        fields.add_meta_field_with("__name", |lua| Ok("LuaFile".to_string()));
+        fields.add_meta_field_with("__name", |_lua| Ok("LuaFile".to_string()));
     }
     fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("write", |l, t, (content): (String)| {
+        methods.add_method_mut("write", |_l, t, content: String| {
             t.1.write_all(content.as_bytes())?;
             Ok(())
         });
-        methods.add_method_mut("read", |l, t, ()| {
+        methods.add_method_mut("read", |_l, t, ()| {
             let mut content = String::new();
             let stream_pos = t.1.stream_position()?;
             t.1.seek(std::io::SeekFrom::Start(0))?;
@@ -49,7 +52,7 @@ impl UserData for LuaFile {
             t.1.seek(std::io::SeekFrom::Start(stream_pos))?;
             Ok(content)
         });
-        methods.add_method_mut("clear", |l, t, ()| {
+        methods.add_method_mut("clear", |_l, t, ()| {
             t.1.set_len(0)?;
             t.1.flush()?;
             t.1.rewind()?;
@@ -76,11 +79,11 @@ impl UserData for LuaFs {
     //     })
     // }
     fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
-        fields.add_meta_field_with("__name", |lua| Ok("LuaFileSystem".to_string()));
+        fields.add_meta_field_with("__name", |_lua| Ok("LuaFileSystem".to_string()));
     }
 
     fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("createFile", |l, t, p: String| {
+        methods.add_method("createFile", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
             t.is_path_allowed_result(path.as_ref())?;
 
@@ -92,7 +95,7 @@ impl UserData for LuaFs {
             let file = LuaFile(path.display().to_string(), file);
             Ok(file)
         });
-        methods.add_method("createDir", |l, t, p: String| {
+        methods.add_method("createDir", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
             t.is_path_allowed_result(path.as_ref())?;
             create_dir(&path)?;
@@ -100,7 +103,7 @@ impl UserData for LuaFs {
 
             Ok(path.as_ref().display().to_string())
         });
-        methods.add_method("openDir", |l, t, p: String| {
+        methods.add_method("openDir", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
             t.is_path_allowed_result(path.as_ref())?;
 

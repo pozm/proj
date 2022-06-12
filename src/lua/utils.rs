@@ -19,7 +19,7 @@ fn pretty_print_thread_state(state: ThreadStatus) -> String {
 //     ctx.globals().g
 // }
 
-fn pretty_print_Table(val: &Table, depth: Option<i32>) -> String {
+fn pretty_print_table(val: &Table, depth: Option<i32>) -> String {
     let mut output = String::new();
     let d = depth.unwrap_or(0);
     output.push_str(
@@ -62,8 +62,21 @@ pub fn pretty_print_lvalue(val: &Value, depth: Option<i32>) -> String {
         Value::Integer(i) => output = i.to_string(),
         Value::Number(f) => output = f.to_string(),
         Value::String(s) => output = s.to_str().unwrap().into(),
-        Value::Table(t) => output = pretty_print_Table(t, depth),
-        Value::Function(f) => output = format!("fn"),
+        Value::Table(t) => output = pretty_print_table(t, depth),
+        Value::Function(f) => {
+            let finfo = f.info();
+            output = format!(
+                "({what}) fn {name} @ {from}-{to}",
+                what =
+                    String::from_utf8(finfo.what.unwrap_or(vec!['C' as u8])).unwrap_or("C".into()),
+                from = finfo.line_defined,
+                to = finfo.last_line_defined,
+                name = String::from_utf8(finfo.name.unwrap_or(vec![
+                    'u' as u8, 'n' as u8, 'k' as u8, 'n' as u8, 'o' as u8, 'w' as u8, 'n' as u8,
+                ]))
+                .unwrap_or("<unknown>".into())
+            )
+        }
         Value::Thread(t) => output = format!("thread<{}>", pretty_print_thread_state(t.status())),
         Value::UserData(ud) => {
             // println!("{:?}",ud.get_metatable().unwrap().pairs::<Value>().into_iter().collect::<Vec<_>>());

@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use mlua::{Lua, MultiValue};
 
 use crate::lua::utils::pretty_print_lvalue;

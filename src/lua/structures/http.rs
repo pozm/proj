@@ -1,12 +1,13 @@
 use std::{
+    collections::HashMap,
     str::FromStr,
-    sync::{Arc, Mutex}, collections::HashMap,
+    sync::{Arc, Mutex},
 };
 
 use mlua::{Error, LuaSerdeExt, UserData, Value};
 use reqwest::{
     header::{HeaderMap, HeaderName},
-    Method, RequestBuilder,
+    Method,
 };
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +19,7 @@ struct LuaHttpRequest {
     url: String,
     method: String,
     body: Option<String>,
-    headers: HashMap<String,String>,
+    headers: HashMap<String, String>,
 }
 
 impl UserData for LuaHttpRequest {}

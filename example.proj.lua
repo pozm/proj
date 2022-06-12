@@ -36,6 +36,8 @@ s.invoke_fn = function()
     })
     print(remote_content.body)
 
+    print(remote_content)
+
 end
 
 print(s)

@@ -22,7 +22,7 @@ struct ProgramArgs {
     pub script: Option<String>,
     #[clap(short, long)]
     pub list_scripts: bool,
-    #[clap(short='c',long)]
+    #[clap(short = 'c', long)]
     pub show_config: bool,
 }
 #[tokio::main]
@@ -38,14 +38,13 @@ async fn main() {
         ProjectDirs::from("com", "Pozm", "Proj").expect("Failed to get project directories");
     let proj = proj_dirs.config_dir();
 
-    
     let scripts_path = proj.join("scripts");
     let scripts_conf_path = scripts_path.join("config");
     create_dir_all(&proj).unwrap();
     create_dir_all(&scripts_path).unwrap();
     if cli.show_config {
         println!("config can be found at {:?}", proj.absolutize().unwrap());
-        return
+        return;
     }
     let lua = Lua::new_with(
         StdLib::BIT | StdLib::MATH | StdLib::STRING | StdLib::TABLE,
@@ -99,14 +98,19 @@ async fn main() {
         } else {
             if let Some(lua_fn) = SCRIPTS_MANAGER.lock().unwrap().fns.get(&script).unwrap() {
                 let lua_fn = lua.registry_value::<Function>(lua_fn).unwrap();
-                let proj_dir = cli.project_path.unwrap().absolutize().unwrap().clone().display().to_string();
+                let proj_dir = cli
+                    .project_path
+                    .unwrap()
+                    .absolutize()
+                    .unwrap()
+                    .clone()
+                    .display()
+                    .to_string();
                 let globs = lua.globals();
                 globs
                     .set("DIR_PROJECT", format!("{}/", proj_dir.clone()))
                     .unwrap();
-                globs
-                    .set("fs", LuaFs(vec![proj_dir.clone()]))
-                    .unwrap();
+                globs.set("fs", LuaFs(vec![proj_dir.clone()])).unwrap();
                 globs
                     .set(
                         "http",
