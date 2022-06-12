@@ -6,7 +6,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub struct LuaFs(pub Vec<String>);
+use crate::lua::structures::permissions::{PERMISSIONS_MANAGER, Permission};
+
+pub struct LuaFs();
 
 pub struct LuaFile(pub String, pub File);
 
@@ -16,9 +18,19 @@ impl LuaFs {
 
         println!("check if path is allowed: {:?}", path);
 
-        self.0
-            .iter()
-            .any(|allowed_path| path.starts_with(allowed_path))
+        let mut permissions = PERMISSIONS_MANAGER.lock().unwrap();
+        let p = path.absolutize().unwrap().display().to_string();
+        let some_closure = |x:&Permission| {match x {Permission::Fs(x) => p.starts_with(x),_=>false}};
+        if permissions.allowed.iter().any(some_closure) {
+            return true;
+        }
+        else if permissions.denied.iter().any(some_closure) {
+            return false;
+        } else {
+            permissions.ask_for_access(Permission::Fs(p)).is_ok()
+        }
+
+
     }
     #[inline]
     fn is_path_allowed_result<T: Into<PathBuf> + Clone>(&self, path: T) -> Result<(), mlua::Error> {
@@ -66,18 +78,6 @@ impl UserData for LuaFile {
 }
 
 impl UserData for LuaFs {
-    // fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
-    //     fields.add_field_method_get("create_file", |l,t| {
-    //         l.create_function(|l,(t,p):(LuaFs,String)| {
-    //             let path = Path::new(&p);
-    //             if !t.is_path_allowed(path) {
-
-    //             }
-
-    //             Ok("")
-    //         }).unwrap().bind(*t)
-    //     })
-    // }
     fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
         fields.add_meta_field_with("__name", |_lua| Ok("LuaFileSystem".to_string()));
     }

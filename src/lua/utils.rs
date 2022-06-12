@@ -93,10 +93,7 @@ pub fn pretty_print_lvalue(val: &Value, depth: Option<i32>) -> String {
                     "LuaScript" => format!("{:?}", ud.borrow::<LuaScript>().unwrap()),
                     "ScriptsManager" => format!("{:?}", ud.borrow::<ScriptsManager>().unwrap()),
                     "LuaFile" => format!("{:?}", ud.borrow::<LuaFile>().unwrap().0),
-                    "LuaFileSystem" => format!(
-                        "Allowed directories = {:?}",
-                        ud.borrow::<LuaFs>().unwrap().0.join(", ")
-                    ),
+                    "LuaFileSystem" => format!("{{}}"),
                     _ => "{}".to_string(),
                 }
             )

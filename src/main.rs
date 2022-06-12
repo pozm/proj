@@ -9,7 +9,7 @@ use std::{
 
 use clap::Parser;
 use directories::ProjectDirs;
-use lua::structures::{fs::LuaFs, http::LuaHttp, scripts::SCRIPTS_MANAGER};
+use lua::structures::{fs::LuaFs, http::LuaHttp, scripts::SCRIPTS_MANAGER, permissions::{PERMISSIONS_MANAGER, Permission}};
 use mlua::{Function, Lua, LuaOptions, StdLib};
 use path_absolutize::Absolutize;
 
@@ -98,26 +98,32 @@ async fn main() {
         } else {
             if let Some(lua_fn) = SCRIPTS_MANAGER.lock().unwrap().fns.get(&script).unwrap() {
                 let lua_fn = lua.registry_value::<Function>(lua_fn).unwrap();
-                let proj_dir = cli
-                    .project_path
-                    .unwrap()
-                    .absolutize()
-                    .unwrap()
+                let proj_dir_path = cli
+                .project_path
+                .as_ref()
+                .unwrap()
+                .absolutize()
+                .unwrap();
+                let proj_dir = proj_dir_path
                     .clone()
                     .display()
                     .to_string();
+
+                PERMISSIONS_MANAGER.lock().unwrap().allowed.push(Permission::Fs(proj_dir.clone()));
+                // PERMISSIONS_MANAGER.lock().unwrap().denied.push(Permission::Fs(proj_dir_path.join("..").absolutize().unwrap().clone().display().to_string())); // test
+
                 let globs = lua.globals();
                 globs
                     .set("DIR_PROJECT", format!("{}/", proj_dir.clone()))
                     .unwrap();
-                globs.set("fs", LuaFs(vec![proj_dir.clone()])).unwrap();
+                globs.set("fs", LuaFs()).unwrap();
                 globs
                     .set(
                         "http",
                         LuaHttp(Arc::new(Mutex::new(reqwest::Client::new()))),
                     )
                     .unwrap();
-
+                globs.set("permissions", PERMISSIONS_MANAGER.clone()).unwrap();
                 match lua_fn.call_async::<_, ()>(()).await {
                     Ok(_) => println!("done!"),
                     Err(e) => eprintln!("error when calling script : {}", e),

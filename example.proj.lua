@@ -38,6 +38,8 @@ s.invoke_fn = function()
 
     print(remote_content)
 
+    print(permissions.allowed)
+
 end
 
 print(s)
