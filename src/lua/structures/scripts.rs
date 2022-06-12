@@ -9,15 +9,12 @@ use mlua::{Function, RegistryKey, UserData};
 #[derive(Default, Clone, Debug)]
 pub struct LuaScript {
     pub name: String,
+    pub bytecode_fn : Option<Vec<u8>>
 }
 impl UserData for LuaScript {
     fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
         fields.add_field_method_set("invoke_fn", |lua, this, f: Function<'_>| {
-            SCRIPTS_MANAGER
-                .lock()
-                .unwrap()
-                .fns
-                .insert(this.name.to_string(), Some(lua.create_registry_value(f)?));
+            this.bytecode_fn = Some(f.dump(false));
             Ok(())
         });
         fields.add_meta_field_with("__name", |lua| Ok("LuaScript".to_string()));

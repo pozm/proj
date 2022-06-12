@@ -32,7 +32,7 @@ pub fn setup_lua(lua: &Lua) {
         .set(
             "luaScript",
             lua.create_function(|_, s: String| {
-                let p = LuaScript { name: s };
+                let p = LuaScript { name: s, bytecode_fn:None };
                 Ok(p)
             })
             .unwrap(),

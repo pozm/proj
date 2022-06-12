@@ -97,8 +97,9 @@ async fn main() {
         if !script_names.contains(&script) {
             println!("unable to find that script, try using listing scripts")
         } else {
-            if let Some(lua_fn) = SCRIPTS_MANAGER.lock().unwrap().fns.get(&script).unwrap() {
-                let lua_fn = lua.registry_value::<Function>(lua_fn).unwrap();
+            if let Some(script) = SCRIPTS_MANAGER.lock().unwrap().scripts.iter().find(|x| x.name == script) {
+                let bc=script.bytecode_fn.as_ref().unwrap().clone();
+                let lua_fn = lua.load(&bc);
                 let proj_dir = cli.project_path.unwrap().absolutize().unwrap().clone().display().to_string();
                 let globs = lua.globals();
                 globs

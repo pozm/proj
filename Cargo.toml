@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-mlua = {version = "0.8.0-beta.5",features=["vendored","luau","send","async","serialize"]}
+mlua = {version = "0.8.0-beta.5",features=["vendored","lua52","send","async","serialize"]}
 directories = "4.0.1"
 log = "0.4.17"
 lazy_static = "1.4.0"

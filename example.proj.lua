@@ -25,7 +25,7 @@ s.invoke_fn = function()
 
     print(file)
 
-    print(fs:exists(DIR_PROJECT.. "pogger.lua"))
+    print(fs:exists(DIR_PROJECT.. "../../../pogger.lua"))
     print(fs:exists(DIR_PROJECT.. "pogger1.lua"))
 
     local remote_content = http:request({
