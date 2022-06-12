@@ -6,7 +6,7 @@ s.invoke_fn = function()
     print("pog champ")
     
     print(fs)
-    local file = fs:createFile(DIR_PROJECT.. "pogger.lua");
+    local file = fs:createFile(DIR_PROJECT .. "pogger.lua");
     file:write("print'pogger'")
     file:clear()
     file:write("yays!")
@@ -29,9 +29,10 @@ s.invoke_fn = function()
     print(fs:exists(DIR_PROJECT.. "pogger1.lua"))
 
     local remote_content = http:request({
-        url="https://raw.githubusercontent.com/pozm/proj/master/readme.md",
+        url="https://httpbin.org/anything",
         method="get",
-        headers={}
+        headers={pog="oui"},
+        body="poggerere"
     })
     print(remote_content.body)
 

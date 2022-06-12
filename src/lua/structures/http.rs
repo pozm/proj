@@ -1,6 +1,6 @@
 use std::{
     str::FromStr,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex}, collections::HashMap,
 };
 
 use mlua::{Error, LuaSerdeExt, UserData, Value};
@@ -18,7 +18,7 @@ struct LuaHttpRequest {
     url: String,
     method: String,
     body: Option<String>,
-    headers: Vec<(String, String)>,
+    headers: HashMap<String,String>,
 }
 
 impl UserData for LuaHttpRequest {}
@@ -59,6 +59,7 @@ impl UserData for LuaHttp {
                     options.url,
                 )
                 .headers(header_map)
+                .body(options.body.unwrap_or_default())
                 .send()
                 .await
                 .or_else(|e| Err(Error::RuntimeError(e.to_string())))?;
