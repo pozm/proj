@@ -37,10 +37,13 @@ s.invoke_fn = function()
     })
     print(remote_content.body)
 
-    print(remote_content)
+    -- print(remote_content)
 
     print(permissions.allowed)
+    print(permissions.denied)
+    print(permissions)
 
+    
 end
 
 print(s)

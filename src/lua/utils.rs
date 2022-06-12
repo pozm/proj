@@ -2,7 +2,7 @@ use mlua::{Table, ThreadStatus, Value};
 
 use super::structures::{
     fs::{LuaFile, LuaFs},
-    scripts::{LuaScript, ScriptsManager},
+    scripts::{LuaScript, ScriptsManager}, permissions::Permissions,
 };
 
 fn pretty_print_thread_state(state: ThreadStatus) -> String {
@@ -93,6 +93,7 @@ pub fn pretty_print_lvalue(val: &Value, depth: Option<i32>) -> String {
                     "LuaScript" => format!("{:?}", ud.borrow::<LuaScript>().unwrap()),
                     "ScriptsManager" => format!("{:?}", ud.borrow::<ScriptsManager>().unwrap()),
                     "LuaFile" => format!("{:?}", ud.borrow::<LuaFile>().unwrap().0),
+                    "Permissions" => format!("{:?}", ud.borrow::<Permissions>().unwrap()),
                     "LuaFileSystem" => format!("{{}}"),
                     _ => "{}".to_string(),
                 }

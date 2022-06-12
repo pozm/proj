@@ -100,7 +100,10 @@ impl UserData for Permissions {
 
     fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
         fields.add_field_method_get("allowed", |l,t| {
-            l.to_value(&t)
+            l.to_value(&t.allowed)
+        });
+        fields.add_field_method_get("denied", |l,t| {
+            l.to_value(&t.denied)
         });
         
         fields.add_meta_field_with("__name", |_lua| Ok("Permissions".to_string()));
