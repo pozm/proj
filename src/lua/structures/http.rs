@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     str::FromStr,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex}, time::Duration,
 };
 
 use mlua::{Error, LuaSerdeExt, UserData, Value};
@@ -15,6 +15,7 @@ use super::permissions::{PERMISSIONS_MANAGER, Permission};
 
 #[derive(Clone)]
 pub struct LuaHttp(pub Arc<Mutex<reqwest::Client>>);
+
 
 #[derive(Serialize, Deserialize, Clone)]
 struct LuaHttpRequest {
@@ -72,9 +73,10 @@ impl UserData for LuaHttp {
                 )
                 .headers(header_map)
                 .body(options.body.unwrap_or_default())
+                .timeout(Duration::from_secs(1)) // 2 mins
                 .send()
                 .await
-                .or_else(|e| Err(Error::RuntimeError(e.to_string())))?;
+                .or_else(|e| Err(Error::ExternalError(Arc::new(e))))?;
 
             // println!("made req");
 
