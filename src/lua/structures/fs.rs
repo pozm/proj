@@ -81,7 +81,11 @@ impl UserData for LuaFile {
             t.1.read_to_end(&mut content)?;
             t.1.seek(std::io::SeekFrom::Start(stream_pos))?;
 
-            let mut read = Cursor::new(&content);
+            println!("h {}", content.len());
+
+            let mut read = Cursor::new(&mut content);
+
+            println!("making archive");
 
             let mut z = ZipArchive::new(&mut read).or_else(|e| Err(Error::ExternalError(Arc::new(e))))?;
 
@@ -108,6 +112,7 @@ impl UserData for LuaFs {
                 .read(true)
                 .open(&path)?;
             let file = LuaFile(path.display().to_string(), file);
+            println!("done");
             Ok(file)
         });
         methods.add_method("createDir", |_l, t, p: String| {

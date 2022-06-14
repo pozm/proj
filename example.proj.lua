@@ -49,9 +49,27 @@ end
 print(s)
 
 scriptManager:add(s)
-local s = luaScript("tauri-poggers")
-s.invoke_fn = function() print("test") end
+local s = luaScript("zip-test")
+s.invoke_fn = function() 
 
-print(s)
+    local z = http:request({
+        url="https://github.com/curl/curl/releases/download/curl-7_83_1/curl-7.83.1.zip",
+        method="get",
+        content_type="Text",
+        headers={}
+    });
+    local file = fs:createFile(DIR_PROJECT .. "Vulnus_Beta_Win.zip");
+    print("pog");
+    -- print(z.body);
+    file:write(z.body.Text);
+    pcall(function()
+        fs:createDir(DIR_PROJECT .. "pog/")
+
+    end)
+    print("lol fuck u ")
+    file:unzip(DIR_PROJECT .. "pog/");
+
+end
+
 
 scriptManager:add(s)

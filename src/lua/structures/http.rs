@@ -16,12 +16,25 @@ use super::permissions::{PERMISSIONS_MANAGER, Permission};
 #[derive(Clone)]
 pub struct LuaHttp(pub Arc<Mutex<reqwest::Client>>);
 
+#[derive(Serialize, Deserialize, Clone)]
+pub enum ContentTypes {
+    Text,
+    Bytes
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub enum ContentTypesResponse {
+    Text(String),
+    Bytes(Vec<u8>),
+    None
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 struct LuaHttpRequest {
     url: String,
     method: String,
     body: Option<String>,
+    content_type: Option<ContentTypes>,
     headers: HashMap<String, String>,
 }
 
@@ -30,7 +43,7 @@ impl UserData for LuaHttpRequest {}
 #[derive(Serialize, Deserialize, Clone)]
 struct LuaHttpResponse {
     status: u16,
-    body: String,
+    body: ContentTypesResponse,
     headers: Vec<(String, String)>,
 }
 
@@ -76,7 +89,7 @@ impl UserData for LuaHttp {
                 )
                 .headers(header_map)
                 .body(options.body.unwrap_or_default())
-                .timeout(Duration::from_secs(1)) // 2 mins
+                .timeout(Duration::from_secs(120)) // 2 mins
                 .send()
                 .await
                 .or_else(|e| Err(Error::ExternalError(Arc::new(e))))?;
@@ -89,10 +102,21 @@ impl UserData for LuaHttp {
                 .iter()
                 .map(|(k, v)| (k.to_string(), v.to_str().unwrap().to_string()))
                 .collect::<Vec<_>>();
-            let content = result.text().await.unwrap_or("".to_string());
+            
+            let mut resp_content = ContentTypesResponse::None;
+            match options.content_type {
+                Some(ContentTypes::Bytes) => {
+                    resp_content = ContentTypesResponse::Bytes(result.bytes().await.or_else(|e| Err(Error::ExternalError(Arc::new(e))))?.to_vec());
+
+                },
+                Some(ContentTypes::Text) | None => {
+                    resp_content = ContentTypesResponse::Text(result.text().await.or_else(|e| Err(Error::ExternalError(Arc::new(e))))?);
+
+                }
+            }
 
             Ok(l.to_value(&LuaHttpResponse {
-                body: content,
+                body: resp_content,
                 headers,
                 status,
             }))
