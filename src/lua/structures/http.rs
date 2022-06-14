@@ -43,6 +43,9 @@ impl UserData for LuaHttp {
 
             if let Ok(u) = url::Url::parse(&options.url) {
                 let domain = u.host_str().ok_or(Error::RuntimeError("invalid url".to_string()))?;
+                if !vec!["http","https"].contains(&u.scheme()) {
+                    return Err(Error::RuntimeError("invalid url".to_string()));
+                }
                 let p = Permission::Http(domain.to_string());
                 PERMISSIONS_MANAGER.lock().unwrap().ask_for_access(&p)?;
             } else {
