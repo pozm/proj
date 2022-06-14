@@ -1,31 +1,45 @@
 use mlua::{Error, UserData};
 use path_absolutize::*;
+use zip::{ZipArchive, write::FileOptions, ZipWriter};
+use core::fmt;
 use std::{
     fs::{self, create_dir, read_dir, File, OpenOptions},
-    io::{Read, Seek, Write},
-    path::{Path, PathBuf},
+    io::{Read, Seek, Write, Cursor},
+    path::{Path, PathBuf}, sync::Arc,
 };
+use std::error::Error as OtherError;
 use mlua::prelude::*;
 
 use crate::lua::structures::permissions::{PERMISSIONS_MANAGER, Permission};
+
+#[derive(Debug)]
+struct FsError(String);
+
+impl fmt::Display for FsError {
+	fn fmt<'a>(&self, f: &'a mut fmt::Formatter) -> fmt::Result {
+		f.write_str(&format!("FileSystem Error ({})",self.0))
+	}
+}
+
+impl OtherError for FsError {
+
+}
 
 pub struct LuaFs();
 
 pub struct LuaFile(pub String, pub File);
 
-impl LuaFs {
-    #[inline]
-    fn is_path_allowed<T: Into<PathBuf>>(&self, path: T) -> LuaResult<()> {
-        let path: &PathBuf = &path.into();
+#[inline]
+fn is_path_allowed<T: Into<PathBuf>>(path: T) -> LuaResult<()> {
+    let path: &PathBuf = &path.into();
 
-        println!("check if path is allowed: {:?}", path);
+    println!("check if path is allowed: {:?}", path);
 
-        let mut permissions = PERMISSIONS_MANAGER.lock().unwrap();
-        let p = Permission::Fs(path.absolutize().unwrap().display().to_string());
-        permissions.ask_for_access(&p)
+    let mut permissions = PERMISSIONS_MANAGER.lock().unwrap();
+    let p = Permission::Fs(path.absolutize().unwrap().display().to_string());
+    permissions.ask_for_access(&p)
 
 
-    }
 }
 
 impl UserData for LuaFile {
@@ -56,6 +70,24 @@ impl UserData for LuaFile {
         methods.add_method_mut("seek", |_, t, pos: u64| {
             t.1.seek(std::io::SeekFrom::Start(pos))?;
             Ok(())
+        });
+        methods.add_method_mut("unzip", |_, t, to:String| {
+            let path = Path::new(&to).absolutize()?;
+            is_path_allowed(path.as_ref())?;
+            
+            let mut content = vec![];
+            let stream_pos = t.1.stream_position()?;
+            t.1.seek(std::io::SeekFrom::Start(0))?;
+            t.1.read_to_end(&mut content)?;
+            t.1.seek(std::io::SeekFrom::Start(stream_pos))?;
+
+            let mut read = Cursor::new(&content);
+
+            let mut z = ZipArchive::new(&mut read).or_else(|e| Err(Error::ExternalError(Arc::new(e))))?;
+
+            z.extract(&path).or_else(|e| Err(Error::ExternalError(Arc::new(e))))?;
+
+            Ok(())
         })
     }
 }
@@ -68,7 +100,7 @@ impl UserData for LuaFs {
     fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method("createFile", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
-            t.is_path_allowed(path.as_ref())?;
+            is_path_allowed(path.as_ref())?;
 
             let file = OpenOptions::new()
                 .create(true)
@@ -80,7 +112,7 @@ impl UserData for LuaFs {
         });
         methods.add_method("createDir", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
-            t.is_path_allowed(path.as_ref())?;
+            is_path_allowed(path.as_ref())?;
             create_dir(&path)?;
             // let file = LuaFile(path.display().to_string(), file);
 
@@ -88,7 +120,7 @@ impl UserData for LuaFs {
         });
         methods.add_method("openDir", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
-            t.is_path_allowed(path.as_ref())?;
+            is_path_allowed(path.as_ref())?;
 
             let dir = read_dir(path)?;
             // let file = LuaFile(path.display().to_string(), file);
@@ -99,7 +131,7 @@ impl UserData for LuaFs {
         });
         methods.add_method("openFile", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
-            t.is_path_allowed(path.as_ref())?;
+            is_path_allowed(path.as_ref())?;
 
             let file = OpenOptions::new()
                 .create(false)
@@ -111,22 +143,22 @@ impl UserData for LuaFs {
         });
         methods.add_method("exists", |_l, t, p: String| {
             let path = Path::new(&p).absolutize()?;
-            t.is_path_allowed(path.as_ref())?;
+            is_path_allowed(path.as_ref())?;
 
             Ok(path.exists())
         });
         methods.add_method("copy", |_l, t, (fp, tp): (String, String)| {
             let path = Path::new(&tp).absolutize()?;
-            t.is_path_allowed(path.as_ref())?;
+            is_path_allowed(path.as_ref())?;
 
             crate::utils::copy(fp, path)?;
             Ok(())
         });
         methods.add_method("move", |_l, t, (fp, tp): (String, String)| {
             let path = Path::new(&tp).absolutize()?;
-            t.is_path_allowed(path.as_ref())?;
+            is_path_allowed(path.as_ref())?;
             let pathf = Path::new(&fp).absolutize()?;
-            t.is_path_allowed(path.as_ref())?;
+            is_path_allowed(path.as_ref())?;
 
             fs::rename(pathf, path)?;
             Ok(())
