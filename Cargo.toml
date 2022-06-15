@@ -18,6 +18,7 @@ serde = {version = "1.0",features=["derive"]}
 native-dialog = {version = "0.6.3",features=["windows_dpi_awareness"]}
 url = {version = "2.2.2"}
 zip = {version = "0.6.2"}
+bstr = "0.2.17"
 [feature]
 default=["lua52","native-dialog"]
 native-dialogs = ["dep:native-dialog"]

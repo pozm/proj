@@ -58,16 +58,14 @@ s.invoke_fn = function()
         content_type="Text",
         headers={}
     });
-    local file = fs:createFile(DIR_PROJECT .. "Vulnus_Beta_Win.zip");
-    print("pog");
-    -- print(z.body);
+    local file = fs:createFile(DIR_PROJECT .. "Curl.zip");
     file:write(z.body.Text);
+    print("done writing");
     pcall(function()
-        fs:createDir(DIR_PROJECT .. "pog/")
+        fs:createDir(DIR_PROJECT .. "pog2/")
 
     end)
-    print("lol fuck u ")
-    file:unzip(DIR_PROJECT .. "pog/");
+    file:unzip(DIR_PROJECT .. "pog2/");
 
 end
 

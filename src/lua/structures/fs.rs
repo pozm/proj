@@ -32,15 +32,46 @@ pub struct LuaFile(pub String, pub File);
 #[inline]
 fn is_path_allowed<T: Into<PathBuf>>(path: T) -> LuaResult<()> {
     let path: &PathBuf = &path.into();
-
-    println!("check if path is allowed: {:?}", path);
-
     let mut permissions = PERMISSIONS_MANAGER.lock().unwrap();
     let p = Permission::Fs(path.absolutize().unwrap().display().to_string());
     permissions.ask_for_access(&p)
 
 
+} 
+
+enum FsBytesOrText {
+    Bytes(Vec<u8>),
+    Text(String),
 }
+impl<'lua> FromLua<'lua> for FsBytesOrText {
+    fn from_lua(lua_value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
+        match lua_value {
+            LuaValue::String(s) => Ok(FsBytesOrText::Text(s.to_string_lossy().to_string())),
+            LuaValue::Table(t) => {
+                let mut bytes = Vec::new();
+                for i in 1..=t.len().unwrap_or(0) {
+                    let v : u8 = t.get(i)?;
+                    bytes.push(v);
+                }
+                Ok(FsBytesOrText::Bytes(bytes))
+            }
+            _ => Err(Error::FromLuaConversionError{
+                from:lua_value.type_name(),
+                to:"FsBytesOrText",
+                message:Some("hhh".to_string())
+            }),
+        }
+    }
+}
+impl FsBytesOrText {
+    fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            FsBytesOrText::Bytes(b) => b.clone(),
+            FsBytesOrText::Text(s) => s.as_bytes().to_vec(),
+        }
+    }
+}
+
 
 impl UserData for LuaFile {
     fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
@@ -49,8 +80,8 @@ impl UserData for LuaFile {
         fields.add_meta_field_with("__name", |_lua| Ok("LuaFile".to_string()));
     }
     fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("write", |_l, t, content: String| {
-            t.1.write_all(content.as_bytes())?;
+        methods.add_method_mut("write", |_l, t, content: FsBytesOrText| {
+            t.1.write_all(&content.to_bytes())?;
             Ok(())
         });
         methods.add_method_mut("read", |_l, t, ()| {
@@ -81,14 +112,10 @@ impl UserData for LuaFile {
             t.1.read_to_end(&mut content)?;
             t.1.seek(std::io::SeekFrom::Start(stream_pos))?;
 
-            println!("h {}", content.len());
-
             let mut read = Cursor::new(&mut content);
-
-            println!("making archive");
-
+            
             let mut z = ZipArchive::new(&mut read).or_else(|e| Err(Error::ExternalError(Arc::new(e))))?;
-
+            
             z.extract(&path).or_else(|e| Err(Error::ExternalError(Arc::new(e))))?;
 
             Ok(())
